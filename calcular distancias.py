@@ -4,6 +4,7 @@ import sunbeam
 import numpy as np
 import importlib
 import umap
+import matplotlib.pyplot as plt
 
 importlib.import_module("sunbeam")
 
@@ -55,23 +56,27 @@ Kcolores.sort()  # lista con labels
 
 
 counter=neigs(G2)+neigs(G5)+neigs(G7)#+neigs(G4)+neigs(G5)+neigs(G7)
-n1,n2,n3=nbeigs(G2,neigs(G2),'2D'),nbeigs(G5,neigs(G5),'2D'),nbeigs(G7,neigs(G7),'2D')
-#n4,n5,n7=nbeigs(G4,neigs(G4),'2D'),nbeigs(G5,neigs(G5),'2D'),nbeigs(G7,neigs(G7),'2D')
+n1,n2,n3=sunbeam.nbeigs(G1,neigs(G1),'2D'),sunbeam.nbeigs(G2,neigs(G2),'2D'),sunbeam.nbeigs(G3,neigs(G3),'2D')
+n4,n5,n7=sunbeam.nbeigs(G4,neigs(G4),'2D'),sunbeam.nbeigs(G5,neigs(G5),'2D'),sunbeam.nbeigs(G7,neigs(G7),'2D')
 
 cols=[]
 eigs_matrix=np.zeros((counter,2))
 k=0
 while k<counter:
-'''
-	for i in range(len(n1)):
-		elem=n1[i]
-		eigs_matrix[k][0],eigs_matrix[k][1]=elem[0],elem[1]
-		cols.append(colores['Complete'])
-		k+=1 '''
 	for i in range(len(n2)):
 		elem=n2[i]
 		eigs_matrix[k][0],eigs_matrix[k][1]=elem[0],elem[1]
 		cols.append(colores['Descent'])
+		k+=1
+	for i in range(len(n5)):
+		elem=n5[i]
+		eigs_matrix[k][0],eigs_matrix[k][1]=elem[0],elem[1]
+		cols.append(colores['Friendly'])
+		k+=1
+	for i in range(len(n7)):
+		elem=n7[i]
+		eigs_matrix[k][0],eigs_matrix[k][1]=elem[0],elem[1]
+		cols.append(colores['Unfriendly'])
 		k+=1
 '''
 	for i in range(len(n3)):
@@ -84,16 +89,13 @@ while k<counter:
 		eigs_matrix[k][0],eigs_matrix[k][1]=elem[0],elem[1]
 		cols.append(colores['Sparse'])
 		k+=1'''
-	for i in range(len(n5)):
-		elem=n5[i]
+
+'''
+	for i in range(len(n1)):
+		elem=n1[i]
 		eigs_matrix[k][0],eigs_matrix[k][1]=elem[0],elem[1]
-		cols.append(colores['Friendly'])
-		k+=1
-	for i in range(len(n7)):
-		elem=n7[i]
-		eigs_matrix[k][0],eigs_matrix[k][1]=elem[0],elem[1]
-		cols.append(colores['Unfriendly'])
-		k+=1
+		cols.append(colores['Complete'])
+		k+=1 '''
 
 
 embedding = umap.UMAP(n_neighbors=75, metric='canberra',

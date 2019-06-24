@@ -33,14 +33,33 @@ def neigs(G):
 	return dist
 
 #distance between G1 y G2
+#@numba.njit()
 def dist(G1,G2):
 	d1=sunbeam.nbdist(G1,G2,min(neigs(G1),neigs(G2)))
 	return d1
 
+def fine_tune(graph,topk):
+        """Return fine-tuned eigenvalues."""
+        eigs = sunbeam.nbeigs(graph, topk, fmt='1D')
+        vals = np.abs(eigs)**eta
+        eigs = eigs * vals
+        eigs = np.array([(c.real * sigma, c.imag / sigma) for c in eigs])
+        return eigs
 
-data=[[],[]]
+#@numba.njit()
+def dist_eigs(eigs1,eigs2):
+	return np.linalg.norm(eigs1 - eigs2)
+
+
+#	min_len = min(eigs1.shape[0], eigs2.shape[0])
+#	eigs1 = eigs1[:min_len].T.flatten()
+#	eigs2 = eigs2[:min_len].T.flatten()
+	return np.linalg.norm(eigs1 - eigs2)
+
+#data=[[],[]]
+data=[]
 files = os.listdir(dir_oldyoung)
-
+cols = []
 #Creando los grafos, y calculando los eigenvalores
 for f in files[:]:
 	#plt.figure(dirs.index(dir))
@@ -52,12 +71,14 @@ for f in files[:]:
 	#cols.append(colores[Kcolores[w]])
 	G = nx.read_edgelist(os.path.join(dir_oldyoung,f))
 	#Se usa la funcion neigs() del archivo calcular distancias
-	eigs = sunbeam.nbeigs(G, 80, fmt='2D') 
-	for elem in eigs:
-		#Se agrega a los datos[key] el eigenvalor
-		data[dic[Kcolores[w]]].append(elem)
-		#De nuevo se agrega al counter la cantidad de eigenvalores
-		counter[Kcolores[w]]+=1
+	eigs = sunbeam.nbeigs(G, 80,fmt="1D") 
+	data.append(eigs)
+	cols.append(colores[Kcolores[w]])
+#	for elem in eigs:
+#		#Se agrega a los datos[key] el eigenvalor
+#		data[dic[Kcolores[w]]].append(elem)
+#		#De nuevo se agrega al counter la cantidad de eigenvalores
+#		counter[Kcolores[w]]+=1
 
 
 
@@ -66,7 +87,6 @@ cm=sum([len(data[i]) for i in range(len(data)) ])
 D=np.zeros((cm,2))
 k=0
 
-cols=[]
 
 while k<cm:
 	for i in range(len(data[0])):
@@ -81,9 +101,25 @@ while k<cm:
 		k+=1
 
 
-embedding = umap.UMAP(n_components=3,n_neighbors=15, min_dist=0)
+embedding = umap.UMAP(a=None, angular_rp_forest=False, b=None, init='spectral',
+     learning_rate=3.0, local_connectivity=1.0,
+     metric=<function dist_eigs at 0x7f6295517b70>, metric_kwds=None,
+     min_dist=0, n_components=2, n_epochs=30, n_neighbors=20,
+     negative_sample_rate=5, random_state=None, repulsion_strength=1.0,
+     set_op_mix_ratio=1.0, spread=1.0, target_metric='categorical',
+     target_metric_kwds=None, target_n_neighbors=-1, target_weight=0.5,
+     transform_queue_size=4.0, transform_seed=42, verbose=True)
 
-H = embedding.fit_transform(D)
+
+embedding=umap.UMAP(n_components=2,n_neighbors=25,spread=1,metric=dist_eigs,verbose=True)
+H = embedding.fit_transform(data,y=cols)
+fig = plt.figure()
+plt.scatter(H[:,0],H[:,1],c=cols,s=5)
+plt.show()
+
+
+embedding=umap.UMAP(n_components=3,n_neighbors=25,spread=1,metric=dist_eigs,verbose=True)
+H = embedding.fit_transform(data,y=cols)
 fig = plt.figure()
 ax=fig.add_subplot(111,projection="3d")
 ax.scatter(H[:,0],H[:,1],H[:,2],c=cols,s=5)
@@ -91,6 +127,11 @@ plt.show()
 
 
 
+
+
+fig = plt.figure()
+plt.scatter(H[:,0],H[:,1],c=cols,s=5)
+plt.show()
 
 
 
