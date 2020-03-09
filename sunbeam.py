@@ -58,7 +58,7 @@ TOL = 1e-5
 #############################
 # 1. Matrix representations #
 #############################
-
+#@numba.njit()
 def pseudo_hashimoto(graph):
     """Return the pseudo-Hashimoto matrix.
 
@@ -93,7 +93,7 @@ def pseudo_hashimoto(graph):
     pseudo = sparse.bmat([[None, degrees - ident], [-ident, adj]])
     return pseudo.asformat('csr')
 
-
+#@numba.njit()
 def half_incidence(graph, ordering='blocks', return_ordering=False):
     """Return the 'half-incidence' matrices of the graph.
 
@@ -176,7 +176,7 @@ def half_incidence(graph, ordering='blocks', return_ordering=False):
     else:
         return src, tgt, None
 
-
+#@numba.njit()
 def fast_hashimoto(graph, ordering='blocks', return_ordering=False):
     """Make the Hashimoto (aka Non-Backtracking) matrix.
 
@@ -214,7 +214,7 @@ def fast_hashimoto(graph, ordering='blocks', return_ordering=False):
 #############################
 # 2. Eigenvalue computation #
 #############################
-
+#@numba.njit()
 def nbeigs(graph, topk, fmt='complex'):
     """Compute the largest non-backtracking eigenvalues of a graph.
 
@@ -276,7 +276,7 @@ def nbeigs(graph, topk, fmt='complex'):
     if fmt.upper() == '1D':
         return eigs.T.flatten()
 
-
+#@numba.njit()
 def shave(graph):
     """Return the 2-core of a graph.
 
@@ -299,6 +299,17 @@ def shave(graph):
 # 3. Distance computation #
 ###########################
 
+#@numba.njit()
+def fine_tune(graph,topk,sigma=1.0, eta=0.0):
+        """Return fine-tuned eigenvalues."""
+        eigs = nbeigs(graph, topk, fmt='complex')
+        vals = np.abs(eigs)**eta
+        eigs = eigs * vals
+        eigs = np.array([(c.real * sigma, c.imag / sigma) for c in eigs])
+        return eigs
+
+
+#@numba.njit()
 def nbdist(graph1, graph2, topk, sigma=1.0, eta=0.0):
     """Compute the non-backtracking spectral distance.
 
@@ -350,18 +361,44 @@ def nbdist(graph1, graph2, topk, sigma=1.0, eta=0.0):
     arXiv:1807.09592 [cs.SI], (2018).
 
     """
-    def fine_tune(graph):
-        """Return fine-tuned eigenvalues."""
-        eigs = nbeigs(graph, topk, fmt='complex')
-        vals = np.abs(eigs)**eta
-        eigs = eigs * vals
-        eigs = np.array([(c.real * sigma, c.imag / sigma) for c in eigs])
-        return eigs
+  
 
-    eigs1 = fine_tune(graph1)
-    eigs2 = fine_tune(graph2)
+    eigs1 = fine_tune(graph1,topk)
+    eigs2 = fine_tune(graph2,topk)
     min_len = min(eigs1.shape[0], eigs2.shape[0])
     eigs1 = eigs1[:min_len].T.flatten()
     eigs2 = eigs2[:min_len].T.flatten()
 
     return np.linalg.norm(eigs1 - eigs2)
+
+
+#Calculating the maximum number of eigenvalues
+def neigs(G):
+    core=shave(G)
+    dist=len(core.node)*2-2
+    return dist
+
+#distance between G1 y G2, restringiendo la cantidad de eigenvalores calculados.
+#@numba.njit()
+def dist(G1,G2):
+    d1=nbdist(G1,G2,min(neigs(G1),neigs(G2)))
+    return d1
+
+#@numba.njit()
+def dist_eigs(eigs1,eigs2):
+    return np.linalg.norm(eigs1 - eigs2)
+
+
+def make_plot(data, get_xy, size=0.2):
+    #Plot eigenvalue data.
+    handles = []
+    for i in range(6):
+        rows = data[50*i : 50*(i+1)]
+        xx, yy = get_xy(rows)
+        plt.scatter(xx, yy, s=size, color=options[i]['color'])
+        handles.append(Line2D([], [], marker='o', markersize=8, color='w',
+                              label=options[i]['label'],
+                              markerfacecolor=options[i]['color']))
+
+
+
