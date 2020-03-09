@@ -56,7 +56,7 @@ for f in files[:]:
 	G = nx.read_edgelist(os.path.join(dir_oldyoung,f))
 	graphs.append(G)
 	#Se usa la funcion neigs() del archivo calcular distancias
-	eigs = sunbeam.nbeigs(G, 80,fmt="complex") 
+	eigs = sunbeam.nbeigs(G, 180,fmt="1D") 
 	data.append(eigs)
 	cols.append(colores[Kcolores[w]])
 #	for elem in eigs:
@@ -81,7 +81,7 @@ cm=sum([len(data[i]) for i in range(len(data)) ])
 D=np.zeros((cm,2))
 k=0
 
-
+#HEAT MAP OF SUNBEAM +EUCLIDEAN DISTANCES BETWEEN GRAPHS
 graphs_of_young,graphs_of_old=[],[]
 for i in range(len(graphs)):
 	if cols[i]=="blue":
@@ -96,8 +96,66 @@ for i in range(len(data)):
 	for j in range(len(data)):
 		distances[i,j]=dist(sortedgraphs[i],sortedgraphs[j])
 
-
+distances = np.tril(distances)
+distances[distances==0.]=None
 heat_map = sb.heatmap(distances,xticklabels=sorted(cols),yticklabels=sorted(cols),annot=True)
+
+plt.show()
+
+#HEAT MAP OF SUNBEAM +EUCLIDEAN DISTANCES BETWEEN CONED GRAPHS
+
+def nodes_of_degree1(graph):
+	lista = []
+	for node in G.nodes:
+		if G.degree(node)==1:
+			lista.append(node)
+	return lista
+
+for graph in sortedgraphs:
+	G.add_node("cone")
+	node_list = nodes_of_degree1(graph)
+	for each in node_list:
+		G.add_edge(*(each,'cone'))
+
+distances = np.zeros([len(data),len(data)])
+for i in range(len(data)):
+	for j in range(len(data)):
+		distances[i,j]=dist(sortedgraphs[i],sortedgraphs[j])
+
+distances = np.tril(distances)
+distances[distances==0.]=None
+heat_map = sb.heatmap(distances,xticklabels=sorted(cols),yticklabels=sorted(cols),annot=True)
+
+plt.show()
+
+
+#HEAT MAP OF SUNBEAM +GROMOV-WASSERSTEIN DISTANCES BETWEEN GRAPHS
+
+
+eigs_of_young,eigs_of_old=[],[]
+for i in range(len(graphs)):
+	if cols[i]=="blue":
+		eigs_of_young.append(data[i])
+	else:
+		eigs_of_old.append(data[i])
+
+sortedeigs=eigs_of_young+ eigs_of_old
+
+
+distances = np.zeros([len(data),len(data)])
+for i in range(len(data)):
+	for j in range(len(data)):
+		C1 = np.ones((len(sortedeigs[i]),len(sortedeigs[i])))
+		C2 = np.ones((len(sortedeigs[j]),len(sortedeigs[j])))
+		distances[i,j],log0=ot.gromov.gromov_wasserstein2(C1, C2, sortedeigs[i], sortedeigs[j], 'square_loss',verbose=True,log=True)
+#distances = np.tril(distances)
+#distances[distances==0.]=None
+heat_map = sb.heatmap(distances,xticklabels=sorted(cols),yticklabels=sorted(cols),annot=True)
+
+plt.show()
+
+#HEAT MAP OF SUNBEAM +GROMOV-WASSERSTEIN DISTANCES BETWEEN GRAPHS
+
 
 
 embedding=umap.UMAP(n_components=2,n_neighbors=25,spread=2,metric=dist_eigs,verbose=True)
