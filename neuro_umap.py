@@ -1,7 +1,6 @@
 import networkx as nx
 import os 
 import sunbeam
-from sunbeam import *
 import numpy as np
 import importlib
 import umap
@@ -11,13 +10,12 @@ from mpl_toolkits.mplot3d import Axes3D
 
 
 
-
+#Aqui se definen las categorias, la ruta de carpetas, y todo sobre los datos
 dir_oldyoung="edge_list_graphs" 
 category1="Young"
 category2="Old"
 category3="WS"
 category4="ER"
-
 
 
 colores={category1:'blue',category2:'red',category3:'green',category4:'yellow'}
@@ -42,91 +40,125 @@ dic[category4]=3
 
 data=[]
 files = os.listdir(dir_oldyoung)
-cols = []
-graphs=[]
+
 #Creando los grafos, y calculando los eigenvalores
-for f in files[:]:
-	#plt.figure(dirs.index(dir))
-	#Se verifica cual de las palabras en el diccionario está en el nombre del archivo
-	w=[(key in f) for key in Kcolores].index(True)
-	#Se cuenta al counter el grafo correspondiente
-	counter[Kcolores[w]]+=1
-	#Se agrega a los colores el color correspondiente al tipo de grafo
-	#cols.append(colores[Kcolores[w]])
-	G = nx.read_edgelist(os.path.join(dir_oldyoung,f))
-	graphs.append(G)
-	#Se usa la funcion neigs() del archivo calcular distancias
-	eigs = sunbeam.nbeigs(G, 180,fmt="1D") 
-	data.append(eigs)
-	cols.append(colores[Kcolores[w]])
-#	for elem in eigs:
-#		#Se agrega a los datos[key] el eigenvalor
-#		data[dic[Kcolores[w]]].append(elem)
-#		#De nuevo se agrega al counter la cantidad de eigenvalores
-#		counter[Kcolores[w]]+=1
+def preprocessing(files,eig_format,n_eigs = 180,count = False):
+	"""
+	eig_format: complex,1D,2D
+	n_eigs: maximum number of eigenvalues to calculate
+	count: boolean to count distribution of data
+	"""
+	eigss=[]
+	cols = []
+	graphs=[]
+	for f in files[:]:
+		G = nx.read_edgelist(os.path.join(dir_oldyoung,f))
+		graphs.append(G)
+		#Eigenvalues of the backpropagation matrix
+		eigs = sunbeam.nbeigs(G, n_eigs,fmt=eig_format)
 
-
-for j in range(20):
-	G = nx.erdos_renyi_graph(90,0.1)
-	eigs = sunbeam.nbeigs(G, 80,fmt="1D") 
-	data.append(eigs)
-	cols.append(colores['ER'])
-	G=nx.watts_strogatz_graph(90, 10, 0.5, seed=None) data
-	eigs = sunbeam.nbeigs(G, 80,fmt="1D") 
-	data.append(eigs)
-	cols.append(colores['WS'])
-
-#numero total de eigenvalores
-cm=sum([len(data[i]) for i in range(len(data)) ])
-D=np.zeros((cm,2))
-k=0
-
-#HEAT MAP OF SUNBEAM +EUCLIDEAN DISTANCES BETWEEN GRAPHS
-graphs_of_young,graphs_of_old=[],[]
-for i in range(len(graphs)):
-	if cols[i]=="blue":
-		graphs_of_young.append(graphs[i])
+		#Se verifica cual de las palabras en el diccionario está en el nombre del archivo
+		w=[(key in f) for key in Kcolores].index(True)
+		#Se cuenta al counter el grafo correspondiente
+		counter[Kcolores[w]]+=1 
+		eigss.append(eigs)
+		cols.append(colores[Kcolores[w]])
+	if count: 
+		return eigss,graphs, cols, counter
 	else:
-		graphs_of_old.append(graphs[i])
+		return eigss,graphs, cols
 
-sortedgraphs=graphs_of_young+ graphs_of_old
 
+
+def synthetic_graphs(n):
+	eigss_erdos,eigss_watts=[],[]
+	cols_erdos,cols_watts=[],[]
+	for j in range(n):
+		G_erdos = nx.erdos_renyi_graph(90,0.1)
+		eigs_erdos = sunbeam.nbeigs(G, 80,fmt="1D") 
+		eigss_erdos.append(eigs)
+		cols_erdos.append(colores['ER'])
+		G_watts=nx.watts_strogatz_graph(90, 10, 0.5, seed=None) data
+		eigs_watts = sunbeam.nbeigs(G, 80,fmt="1D") 
+		eigss_watts.append(eigs)
+		cols_watts.append(colores['WS'])
+	return eigss_erdos,cols_erdos,eigss_watts,cols_watts
+
+
+##WASSERSTEIN DISTANCE
+#Converting to fft
+fft_data = [np.fft.fft(data[i]) for i in range(len(data))]
 distances = np.zeros([len(data),len(data)])
-for i in range(len(data)):
-	for j in range(len(data)):
-		distances[i,j]=dist(sortedgraphs[i],sortedgraphs[j])
+for i in range(len(fft_data)):
+	for j in range(len(fft_data)):
+		distances[i,j]=ot.wasserstein_1d(abs(fft_data[i]),abs(fft_data[j]))
 
+distances +=1
 distances = np.tril(distances)
-distances[distances==0.]=None
-heat_map = sb.heatmap(distances,xticklabels=sorted(cols),yticklabels=sorted(cols),annot=True)
+distances -=1
+distances[distances==-1.]=None
 
+
+dics = {"blue":"young","red":"old"}
+labels = [dics[res] for res in sorted(cols)]
+
+heat_map = sb.heatmap(distances,xticklabels=labels,yticklabels=labels)
+plt.title("Wasserstein distance between fft data")
 plt.show()
 
-#HEAT MAP OF SUNBEAM +EUCLIDEAN DISTANCES BETWEEN CONED GRAPHS
 
-def nodes_of_degree1(graph):
+def nodes_of_degree1(G):
 	lista = []
 	for node in G.nodes:
 		if G.degree(node)==1:
 			lista.append(node)
 	return lista
 
-for graph in sortedgraphs:
+def add_cone(G):
 	G.add_node("cone")
-	node_list = nodes_of_degree1(graph)
+	node_list = nodes_of_degree1(G)
 	for each in node_list:
 		G.add_edge(*(each,'cone'))
 
-distances = np.zeros([len(data),len(data)])
-for i in range(len(data)):
-	for j in range(len(data)):
-		distances[i,j]=dist(sortedgraphs[i],sortedgraphs[j])
-
-distances = np.tril(distances)
-distances[distances==0.]=None
-heat_map = sb.heatmap(distances,xticklabels=sorted(cols),yticklabels=sorted(cols),annot=True)
-
-plt.show()
+#HEAT MAP OF SUNBEAM +EUCLIDEAN DISTANCES BETWEEN GRAPHS
+def distance(dist_type,graphs,cols,coned = False):
+	"""
+	dist_type: euclidean
+	graphs1 <----young
+	graphs2 <---- old
+	"""
+	graphs_of_young,graphs_of_old=[],[]
+	labels=[]
+	for i in range(len(eig_data)):
+		if cols[i]=="blue":
+			graphs1.append(graphs[i])
+		else:
+			graphs2.append(graphs[i])
+		
+	
+	sortedgraphs=graphs1 + graphs2
+	labels = ["young" for j in range(len(graphs1))]+["old" for j in range(len(graphs2))]
+	
+	if coned:
+		for G in sortedgraphs:
+			add_cone(G)
+	
+	distances = np.zeros([len(data),len(data)])
+	for i in range(len(eig_data)):
+		for j in range(len(eig_data)):
+			distances[i,j]=sunbeam.dist(sortedgraphs[i],sortedgraphs[j])
+	
+	distances = np.tril(distances)
+	distances[distances==0.]=None
+	
+	if coned:
+		title= "Sunbeam "+dist_type +" distances between coned graphs"
+	else: 
+		title= "Sunbeam "+dist_type +" distances between graphs"
+	
+	heat_map = sb.heatmap(distances,xticklabels=labels,yticklabels=labels)
+	plt.title(title)
+	plt.show()
 
 
 #HEAT MAP OF SUNBEAM +GROMOV-WASSERSTEIN DISTANCES BETWEEN GRAPHS
@@ -140,21 +172,110 @@ for i in range(len(graphs)):
 		eigs_of_old.append(data[i])
 
 sortedeigs=eigs_of_young+ eigs_of_old
+sortedeigs_complex = eigs_of_young+eigs_of_old
+young1 = eigs_of_young[0]
+old1 = eigs_of_old[0]
 
+import ot
+import scipy as sp
 
 distances = np.zeros([len(data),len(data)])
 for i in range(len(data)):
 	for j in range(len(data)):
-		C1 = np.ones((len(sortedeigs[i]),len(sortedeigs[i])))
-		C2 = np.ones((len(sortedeigs[j]),len(sortedeigs[j])))
-		distances[i,j],log0=ot.gromov.gromov_wasserstein2(C1, C2, sortedeigs[i], sortedeigs[j], 'square_loss',verbose=True,log=True)
-#distances = np.tril(distances)
-#distances[distances==0.]=None
-heat_map = sb.heatmap(distances,xticklabels=sorted(cols),yticklabels=sorted(cols),annot=True)
+		C1 = sp.spatial.distance.cdist(sortedeigs[i],sortedeigs[i])
+		C2 = sp.spatial.distance.cdist(sortedeigs[j],sortedeigs[j])
+		C1 /= C1.max()
+		C2 /= C2.max()
+		gw0, log0 = ot.gromov.gromov_wasserstein2(
+		    C1, C2, sortedeigs_complex[i], sortedeigs_complex[j], 'square_loss', verbose=True, log=True)
+		distances[i,j]=abs(gw0)
+	
+
+distances = np.tril(distances)
+distances[distances==0.]=None
+
+
+dics = {"blue":"young","red":"old"}
+labels = [dics[res] for res in sorted(cols)]
+
+heat_map = sb.heatmap(distances,xticklabels=labels,yticklabels=labels,annot=True)
+plt.title("GW distance between graphs")
+plt.show()
+
+
+
 
 plt.show()
 
 #HEAT MAP OF SUNBEAM +GROMOV-WASSERSTEIN DISTANCES BETWEEN GRAPHS
+
+
+data=[]
+files = os.listdir(dir_oldyoung)
+cols = []
+graphs=[]
+#Creando los grafos, y calculando los eigenvalores
+for f in files[:]:
+	#plt.figure(dirs.index(dir))
+	#Se verifica cual de las palabras en el diccionario está en el nombre del archivo
+	w=[(key in f) for key in Kcolores].index(True)
+	#Se cuenta al counter el grafo correspondiente
+	counter[Kcolores[w]]+=1
+	#Se agrega a los colores el color correspondiente al tipo de grafo
+	#cols.append(colores[Kcolores[w]])
+	G = nx.read_edgelist(os.path.join(dir_oldyoung,f))
+	node_list=nodes_of_degree1(G)
+	G.add_node("cone")
+	node_list=nodes_of_degree1(G)
+	for each in node_list:
+		G.add_edge(*(each,'cone'))
+	graphs.append(G)
+	#Se usa la funcion neigs() del archivo calcular distancias
+	eigs = sunbeam.nbeigs(G, 180,fmt="complex") 
+	data.append(eigs)
+	cols.append(colores[Kcolores[w]])
+
+
+
+
+eigs_of_young,eigs_of_old=[],[]
+for i in range(len(graphs)):
+	if cols[i]=="blue":
+		eigs_of_young.append(data[i])
+	else:
+		eigs_of_old.append(data[i])
+
+sortedeigs=eigs_of_young+ eigs_of_old
+sortedeigs_complex = eigs_of_young+eigs_of_old
+young1 = eigs_of_young[0]
+old1 = eigs_of_old[0]
+
+import ot
+import scipy as sp
+
+distances = np.zeros([len(data),len(data)])
+for i in range(len(data)):
+	for j in range(len(data)):
+		C1 = sp.spatial.distance.cdist(sortedeigs[i],sortedeigs[i])
+		C2 = sp.spatial.distance.cdist(sortedeigs[j],sortedeigs[j])
+		C1 /= C1.max()
+		C2 /= C2.max()
+		gw0, log0 = ot.gromov.gromov_wasserstein2(
+		    C1, C2, sortedeigs_complex[i], sortedeigs_complex[j], 'square_loss', verbose=True, log=True)
+		distances[i,j]=abs(gw0)
+
+
+distances = np.tril(distances)
+distances[distances==0.]=None
+
+
+dics = {"blue":"young","red":"old"}
+labels = [dics[res] for res in sorted(cols)]
+
+heat_map = sb.heatmap(distances,xticklabels=labels,yticklabels=labels)
+plt.title("GW between coned graphs")
+plt.show()
+
 
 
 
