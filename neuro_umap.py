@@ -3,6 +3,7 @@ import os
 import sunbeam
 import numpy as np
 import importlib
+import seaborn as sb
 import umap
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
@@ -121,7 +122,7 @@ def add_cone(G):
 		G.add_edge(*(each,'cone'))
 
 #HEAT MAP OF SUNBEAM +EUCLIDEAN DISTANCES BETWEEN GRAPHS
-def distance(graphs,cols,coned = False):
+def distance(graphs,cols,dim_len_spec=1,coned = False):
 	"""
 	dist_type: euclidean
 	graphs1 <----young
@@ -129,7 +130,7 @@ def distance(graphs,cols,coned = False):
 	"""
 	graphs1,graphs2=[],[]
 	labels=[]
-	for i in range(len(eig_data)):
+	for i in range(len(graphs)):
 		if cols[i]=="blue":
 			graphs1.append(graphs[i])
 		else:
@@ -143,18 +144,18 @@ def distance(graphs,cols,coned = False):
 		for G in sortedgraphs:
 			add_cone(G)
 	
-	distances = np.zeros([len(data),len(data)])
-	for i in range(len(eig_data)):
-		for j in range(len(eig_data)):
-			distances[i,j]=sunbeam.dist(sortedgraphs[i],sortedgraphs[j])
+	distances = np.zeros([len(graphs),len(graphs)])
+	for i in range(len(graphs)):
+		for j in range(len(graphs)):
+			distances[i,j]=sunbeam.dist(sortedgraphs[i],sortedgraphs[j],dim_len_spec)
 	
 	distances = np.tril(distances)
 	distances[distances==0.]=None
 	
 	if coned:
-		title= "Sunbeam "+dist_type +" distances between coned graphs"
+		title= "Sunbeam euclidean distance between coned graphs"
 	else: 
-		title= "Sunbeam "+dist_type +" distances between graphs"
+		title= "Sunbeam euclidean distance between graphs"
 	
 	heat_map = sb.heatmap(distances,xticklabels=labels,yticklabels=labels)
 	plt.title(title)
@@ -225,7 +226,6 @@ fig = plt.figure()
 ax=fig.add_subplot(111,projection="3d")
 ax.scatter(H[:,0],H[:,1],H[:,2],c=cols,s=5)
 plt.show()
-
 
 
 

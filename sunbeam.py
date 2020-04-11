@@ -310,7 +310,7 @@ def fine_tune(graph,topk,sigma=1.0, eta=0.0):
 
 
 #@numba.njit()
-def nbdist(graph1, graph2, topk,cycle_len=1.0, sigma=1.0, eta=0.0):
+def nbdist(graph1, graph2, topk,cycle_len=1, sigma=1.0, eta=0.0):
     """Compute the non-backtracking spectral distance.
 
     Let c_j = a_j + i * b_j be the j-th non-backtracking eigenvalue of
@@ -370,9 +370,9 @@ def nbdist(graph1, graph2, topk,cycle_len=1.0, sigma=1.0, eta=0.0):
     eigs2 = eigs2[:min_len].T.flatten()
     relaxed_len_spectrum1 = np.zeros(cycle_len)
     relaxed_len_spectrum2 = np.zeros(cycle_len)
-    for j in range(1,len(cycle_len)+1):
-        relaxed_len_spectrum1[j] = (eigs1**j).sum()
-        relaxed_len_spectrum2[j] = (eigs2**j).sum()
+    for j in range(1,cycle_len+1):
+        relaxed_len_spectrum1[j-1] = (eigs1**j).sum()
+        relaxed_len_spectrum2[j-1] = (eigs2**j).sum()
     return np.linalg.norm(relaxed_len_spectrum1-relaxed_len_spectrum2)
 
 
@@ -384,8 +384,8 @@ def neigs(G):
 
 #distance between G1 y G2, restringiendo la cantidad de eigenvalores calculados.
 #@numba.njit()
-def dist(G1,G2):
-    d1=nbdist(G1,G2,min(neigs(G1),neigs(G2)))
+def dist(G1,G2,dim_len_spec=1):
+    d1=nbdist(G1,G2,min(neigs(G1),neigs(G2)),dim_len_spec)
     return d1
 
 #@numba.njit()
