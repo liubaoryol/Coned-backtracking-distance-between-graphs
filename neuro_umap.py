@@ -121,13 +121,13 @@ def add_cone(G):
 		G.add_edge(*(each,'cone'))
 
 #HEAT MAP OF SUNBEAM +EUCLIDEAN DISTANCES BETWEEN GRAPHS
-def distance(dist_type,graphs,cols,coned = False):
+def distance(graphs,cols,coned = False):
 	"""
 	dist_type: euclidean
 	graphs1 <----young
 	graphs2 <---- old
 	"""
-	graphs_of_young,graphs_of_old=[],[]
+	graphs1,graphs2=[],[]
 	labels=[]
 	for i in range(len(eig_data)):
 		if cols[i]=="blue":
@@ -162,120 +162,53 @@ def distance(dist_type,graphs,cols,coned = False):
 
 
 #HEAT MAP OF SUNBEAM +GROMOV-WASSERSTEIN DISTANCES BETWEEN GRAPHS
-
-
-eigs_of_young,eigs_of_old=[],[]
-for i in range(len(graphs)):
-	if cols[i]=="blue":
-		eigs_of_young.append(data[i])
-	else:
-		eigs_of_old.append(data[i])
-
-sortedeigs=eigs_of_young+ eigs_of_old
-sortedeigs_complex = eigs_of_young+eigs_of_old
-young1 = eigs_of_young[0]
-old1 = eigs_of_old[0]
-
 import ot
 import scipy as sp
 
-distances = np.zeros([len(data),len(data)])
-for i in range(len(data)):
-	for j in range(len(data)):
-		C1 = sp.spatial.distance.cdist(sortedeigs[i],sortedeigs[i])
-		C2 = sp.spatial.distance.cdist(sortedeigs[j],sortedeigs[j])
-		C1 /= C1.max()
-		C2 /= C2.max()
-		gw0, log0 = ot.gromov.gromov_wasserstein2(
-		    C1, C2, sortedeigs_complex[i], sortedeigs_complex[j], 'square_loss', verbose=True, log=True)
-		distances[i,j]=abs(gw0)
+def distance_gromov(complex_eig_data,cols,coned=False):
+	"""
+	dist_type: gromov-wasserstein
+	eigs1 <----young
+	eigs2 <---- old
+	"""
+	complex_eigs1,complex_eigs2=[],[]
+	for i in range(len(graphs)):
+		if cols[i]=="blue":
+			eigs1.append(eig_data[i])
+			complex_eigs1.append(complex_eig_data[i])
+		else:
+			complex_eigs2.append(complex_eig_data[i])
 	
+	eigs1 = np.array([(c.real, c.imag) for c in complex_eigs1]).T.flatten()
+	eigs2 = np.array([(c.real, c.imag) for c in complex_eigs2]).T.flatten()
 
-distances = np.tril(distances)
-distances[distances==0.]=None
-
-
-dics = {"blue":"young","red":"old"}
-labels = [dics[res] for res in sorted(cols)]
-
-heat_map = sb.heatmap(distances,xticklabels=labels,yticklabels=labels,annot=True)
-plt.title("GW distance between graphs")
-plt.show()
+	sortedeigs=eigs1+ eigs2
+	sortedeigs_complex = complex_eigs1+complex_eigs2
 
 
 
-
-plt.show()
-
-#HEAT MAP OF SUNBEAM +GROMOV-WASSERSTEIN DISTANCES BETWEEN GRAPHS
-
-
-data=[]
-files = os.listdir(dir_oldyoung)
-cols = []
-graphs=[]
-#Creando los grafos, y calculando los eigenvalores
-for f in files[:]:
-	#plt.figure(dirs.index(dir))
-	#Se verifica cual de las palabras en el diccionario está en el nombre del archivo
-	w=[(key in f) for key in Kcolores].index(True)
-	#Se cuenta al counter el grafo correspondiente
-	counter[Kcolores[w]]+=1
-	#Se agrega a los colores el color correspondiente al tipo de grafo
-	#cols.append(colores[Kcolores[w]])
-	G = nx.read_edgelist(os.path.join(dir_oldyoung,f))
-	node_list=nodes_of_degree1(G)
-	G.add_node("cone")
-	node_list=nodes_of_degree1(G)
-	for each in node_list:
-		G.add_edge(*(each,'cone'))
-	graphs.append(G)
-	#Se usa la funcion neigs() del archivo calcular distancias
-	eigs = sunbeam.nbeigs(G, 180,fmt="complex") 
-	data.append(eigs)
-	cols.append(colores[Kcolores[w]])
-
-
-
-
-eigs_of_young,eigs_of_old=[],[]
-for i in range(len(graphs)):
-	if cols[i]=="blue":
-		eigs_of_young.append(data[i])
-	else:
-		eigs_of_old.append(data[i])
-
-sortedeigs=eigs_of_young+ eigs_of_old
-sortedeigs_complex = eigs_of_young+eigs_of_old
-young1 = eigs_of_young[0]
-old1 = eigs_of_old[0]
-
-import ot
-import scipy as sp
-
-distances = np.zeros([len(data),len(data)])
-for i in range(len(data)):
-	for j in range(len(data)):
-		C1 = sp.spatial.distance.cdist(sortedeigs[i],sortedeigs[i])
-		C2 = sp.spatial.distance.cdist(sortedeigs[j],sortedeigs[j])
-		C1 /= C1.max()
-		C2 /= C2.max()
-		gw0, log0 = ot.gromov.gromov_wasserstein2(
-		    C1, C2, sortedeigs_complex[i], sortedeigs_complex[j], 'square_loss', verbose=True, log=True)
-		distances[i,j]=abs(gw0)
-
-
-distances = np.tril(distances)
-distances[distances==0.]=None
-
-
-dics = {"blue":"young","red":"old"}
-labels = [dics[res] for res in sorted(cols)]
-
-heat_map = sb.heatmap(distances,xticklabels=labels,yticklabels=labels)
-plt.title("GW between coned graphs")
-plt.show()
-
+	distances = np.zeros([len(data),len(data)])
+	for i in range(len(data)):
+		for j in range(len(data)):
+			C1 = sp.spatial.distance.cdist(sortedeigs[i],sortedeigs[i])
+			C2 = sp.spatial.distance.cdist(sortedeigs[j],sortedeigs[j])
+			C1 /= C1.max()
+			C2 /= C2.max()
+			gw0, log0 = ot.gromov.gromov_wasserstein2(
+			    C1, C2, sortedeigs_complex[i], sortedeigs_complex[j], 'square_loss', verbose=True, log=True)
+			distances[i,j]=abs(gw0)
+		
+	distances = np.tril(distances)
+	distances[distances==0.]=None
+		
+	if coned:
+		title= "Sunbeam Gromov-Wasserstein distances between coned graphs"
+	else: 
+		title= "Sunbeam Gromov-Wasserstein distances between graphs"
+	
+	heat_map = sb.heatmap(distances,xticklabels=labels,yticklabels=labels)
+	plt.title(title)
+	plt.show()
 
 
 
