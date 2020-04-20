@@ -248,12 +248,12 @@ def wasserstein_kde_dist(eigs,cols,dist_type="sample",coned=False):
 	dist_type=sample,grid
 	"""
 	eigs1,eigs2=[],[]
-	for i in range(len(graphs)):
+	for i in range(len(eigs)):
 		if cols[i]=="blue":
 			eigs1.append(eigs[i])
 		else:
 			eigs2.append(eigs[i])
-	eigs_data=eigs1 + eigs2
+	eigs_data=eigs1 + eigs2 #ordered set of eigenvalues
 	labels = ["young" for j in range(len(eigs1))]+["old" for j in range(len(eigs2))]
 
 	model = [KernelDensity(bandwidth=2, kernel='gaussian') for eigs in eigs_data]
@@ -290,14 +290,14 @@ def wasserstein_kde_dist(eigs,cols,dist_type="sample",coned=False):
 					grid[n,i,j]=model[n].score_samples([[n1[i],n2[j]]])
 		
 		distances = np.zeros([len(eigs_data),len(eigs_data)])
-		for i in range(len(eigs_data)):
-			for j in range(len(eigs_data)):
+		for i in range(len(model)):
+			for j in range(len(model)):
 				vector_i=[np.array([n1[l],n1[k],grid[i,l,k]]) for l in range(len(n1)) for k in range(len(n2))]
 				vector_j=[np.array([n1[l],n1[k],grid[j,l,k]]) for l in range(len(n1)) for k in range(len(n2))]
 				C = sp.spatial.distance.cdist(vector_i,vector_j)
 				C /= C.max()
 				print("length of vector i and vector j is "+str(len(vector_i))+str(len(vector_j))+" respectively")
-				distances[i,j]=ot.emd2(np.ones(len(n1)),np.ones(len(n2)),C)
+				distances[i,j]=ot.emd2(np.ones(len(C)),np.ones(len(C)),C)
 		distances = np.tril(distances)
 		distances[distances==0.]=None
 
