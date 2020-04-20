@@ -243,7 +243,7 @@ def spectral_distance(eigs,cols,coned = False):
 
 
 
-def wasserstein_kde_dist(eigs,cols,dist_type="sample",coned=False):
+def wasserstein_kde_dist(eigs,cols,dist_type="sample",sample_size=60,coned=False):
 	"""
 	dist_type=sample,grid
 	"""
@@ -264,7 +264,7 @@ def wasserstein_kde_dist(eigs,cols,dist_type="sample",coned=False):
 		model[j].fit(eigs_data[j])
 		limits_x.append([np.min(eigs_data[j][:,0]),np.max(eigs_data[j][:,0])])
 		limits_y.append([np.min(eigs_data[j][:,1]),np.max(eigs_data[j][:,1])])
-		samples.append(model[j].sample(30))
+		samples.append(model[j].sample(sample_size))
 
 	if dist_type=="sample":
 		distances = np.zeros([len(eigs_data),len(eigs_data)])
@@ -273,17 +273,19 @@ def wasserstein_kde_dist(eigs,cols,dist_type="sample",coned=False):
 				C = sp.spatial.distance.cdist(samples[i],samples[j])
 				C /= C.max()
 				#We assign weight 1 to each eigenvalue
-				gw0 = ot.emd2(np.ones(30), np.ones(30), C)
+				gw0 = ot.emd2(np.ones(sample_size), np.ones(sample_size), C)
 				distances[i,j]=gw0
 			
 		distances = np.tril(distances)
 		distances[distances==0.]=None
 	if dist_type=="grid":
+		grid_size=np.int(np.floor(np.sqrt(sample_size)))
+		print("Calculating distances between distributions on grid")
 		limitx=[np.max(limits_x[:][0]),np.min(limits_x[:][1])]
 		limity=[np.max(limits_y[:][0]),np.min(limits_y[:][1])]
-		n1=np.linspace(*limitx, 80)
-		n2=np.linspace(*limity, 80)
-		grid=np.zeros([len(model),80,80])
+		n1=np.linspace(*limitx, grid_size)
+		n2=np.linspace(*limity, grid_size)
+		grid=np.zeros([len(model),grid_size,grid_size])
 		for n in range(len(model)):
 			for i in range(len(n1)):
 				for j in range(len(n2)):
@@ -296,7 +298,6 @@ def wasserstein_kde_dist(eigs,cols,dist_type="sample",coned=False):
 				vector_j=[np.array([n1[l],n1[k],grid[j,l,k]]) for l in range(len(n1)) for k in range(len(n2))]
 				C = sp.spatial.distance.cdist(vector_i,vector_j)
 				C /= C.max()
-				print("length of vector i and vector j is "+str(len(vector_i))+str(len(vector_j))+" respectively")
 				distances[i,j]=ot.emd2(np.ones(len(C)),np.ones(len(C)),C)
 		distances = np.tril(distances)
 		distances[distances==0.]=None
@@ -313,7 +314,7 @@ def wasserstein_kde_dist(eigs,cols,dist_type="sample",coned=False):
 	plt.title(title)
 	plt.show()
 
-def graph_distance(files,dist_type,n_eigs = 180,dim_len_spec=1,count = False,coned = False):
+def graph_distance(files,dist_type,n_eigs = 180,dim_len_spec=1,count = False,sample_size=60,coned = False):
 	eigss,graphs,cols=preprocessing(files, "2D", n_eigs, count, coned)
 
 	if dist_type=="sunbeam":
@@ -324,10 +325,10 @@ def graph_distance(files,dist_type,n_eigs = 180,dim_len_spec=1,count = False,con
 		distance_gromov(complex_eigs,cols,coned)
 
 	if dist_type=="wasserstein-grid":
-		wasserstein_kde_dist(eigss,cols,dist_type="grid",coned=coned)
+		wasserstein_kde_dist(eigss,cols,dist_type="grid",sample_size=sample_size,coned=coned)
 
 	if dist_type=="wasserstein-sample":
-		wasserstein_kde_dist(eigss,cols,dist_type="sample",coned=coned)
+		wasserstein_kde_dist(eigss,cols,dist_type="sample",sample_size=sample_size,coned=coned)
 
 	if dist_type=="spectral":
 		spectral_distance(eigs,cols,coned)
