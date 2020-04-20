@@ -6,6 +6,9 @@ import importlib
 import seaborn as sb
 import umap
 import matplotlib.pyplot as plt
+import ot
+import scipy as sp
+from sklearn.neighbors import KernelDensity
 from mpl_toolkits.mplot3d import Axes3D
 
 
@@ -143,8 +146,7 @@ def distance_sunbeam(graphs,cols,dim_len_spec=1,coned = False):
 
 
 #HEAT MAP OF SUNBEAM +GROMOV-WASSERSTEIN DISTANCES BETWEEN GRAPHS
-import ot
-import scipy as sp
+
 
 def distance_gromov(complex_eig_data,cols,coned=False):
 	"""
@@ -167,9 +169,9 @@ def distance_gromov(complex_eig_data,cols,coned=False):
 	sortedeigs_complex = np.array(complex_eigs1+complex_eigs2)
 	labels = ["young" for j in range(len(complex_eigs1))]+["old" for j in range(len(complex_eigs2))]
 	print("Calculating distance matrix...")
-	distances = np.zeros([len(data),len(data)])
-	for i in range(len(data)):
-		for j in range(len(data)):
+	distances = np.zeros([len(complex_eig_data),len(complex_eig_data)])
+	for i in range(len(complex_eig_data)):
+		for j in range(len(complex_eig_data)):
 			C1 = sp.spatial.distance.cdist(sortedeigs[i],sortedeigs[i])
 			C2 = sp.spatial.distance.cdist(sortedeigs[j],sortedeigs[j])
 			C1 /= C1.max()
@@ -192,9 +194,113 @@ def distance_gromov(complex_eig_data,cols,coned=False):
 
 
 
+def spectral_distance(eigs,cols,coned = False):
+	"""
+	dist_type: euclidean
+	graphs1 <----young
+	graphs2 <---- old
+	"""
+	eigs1,eigs2=[],[]
+	labels=[]
+	for i in range(len(graphs)):
+		if cols[i]=="blue":
+			eigs1.append(eigs[i])
+		else:
+			eigs2.append(eigs[i])
+		
+	
+	sortedeigs=eigs1 + eigs2
+	labels = ["young" for j in range(len(eigs1))]+["old" for j in range(len(eigs2))]
 
-def graph_distance(files,dist_type,eig_format="2D",n_eigs = 180,dim_len_spec=1,count = False,coned = False):
-	eigss,graphs,cols=preprocessing(files, eig_format, n_eigs, count, coned)
+	print("Calculating distance matrix...")
+	distances = np.zeros([len(eigs),len(eigs)])
+	for i in range(len(eigs)):
+		for j in range(len(eigs)):
+			n=max(len(sortedeigs[i]),len(sortedeigs[j]))
+			distances[i,j]=np.linalg.norm(sortedeigs[i][:n]-sortedeigs[j][:n])
+	distances = np.tril(distances)
+	distances[distances==0.]=None
+	
+	if coned:
+		title= "Spectral distance between coned graphs"
+	else: 
+		title= "Spectral distance between graphs"
+	
+	heat_map = sb.heatmap(distances,xticklabels=labels,yticklabels=labels)
+	plt.title(title)
+	plt.show()
+
+
+
+def wasserstein_kde_dist(eigs,cols,dist_type="sample",coned=False):
+	"""
+	dist_type=sample,grid
+	"""
+	eigs1,eigs2=[],[]
+	labels=[]
+	for i in range(len(graphs)):
+		if cols[i]=="blue":
+			eigs1.append(eigs[i])
+		else:
+			eigs2.append(eigs[i])
+	eigs_data=eigs1 + eigs2
+	labels = ["young" for j in range(len(eigs1))]+["old" for j in range(len(eigs2))]
+
+	model = [KernelDensity(bandwidth=2, kernel='gaussian') for eigs in eigs_data]
+	limits_x=[]
+	limits_y=[]
+	samples=[]
+	for j in range(len(eigs_data)):
+		model[j].fit(eigs_data[j])
+		limits_x.append([np.min(eigs_data[j][:,0]),np.max(eigs_data[j][:,0])])
+		limits_y.append([np.min(eigs_data[j][:,1]),np.max(eigs_data[j][:,1])])
+		samples.append(model[j].sample(30))
+
+	if dist_type=="sample":
+		distances = np.zeros([len(eigs_data),len(eigs_data)])
+		for i in range(len(eigs_data)):
+			for j in range(len(eigs_data)):
+				C = sp.spatial.distance.cdist(samples[i],samples[j])
+				C /= C.max()
+				#We assign weight 1 to each eigenvalue
+				gw0 = ot.emd2(np.ones(30), np.ones(30), C)
+				distances[i,j]=gw0
+			
+		distances = np.tril(distances)
+		distances[distances==0.]=None
+	if dist_type=="grid":
+		limitx=[np.max(limits_x[:][0]),np.min(limits_x[:][1])]
+		limity=[np.max(limits_y[:][0]),np.min(limits_y[:][1])]
+		n1=np.linspace(*limitx, 80)
+		n2=np.linspace(*limity, 80)
+		grid=np.zeros([len(model),80,80])
+		for n in range(len(model)):
+			for i in range(len(n1)):
+				for j in range(len(n2)):
+					grid[n,i,j]=model[n].score_samples([[n1[i],n2[j]]])
+		
+		distances = np.zeros([len(eigs_data),len(eigs_data)])
+		for i in range(len(eigs_data)):
+			for j in range(len(eigs_data)):
+				vector_i=[n1[l],n1[k],grid[i,l,k] for l in range(len(n1)) for k in range(len(n2))]
+				vector_j=[n1[l],n1[k],grid[j,l,k] for l in range(len(n1)) for k in range(len(n2))]
+				C = sp.spatial.distance.cdist(vector_i,vector_j)
+				C /= C.max()
+				distances[i,j]=ot.emd2(np.ones(len(n1)),np.ones(len(n2)),C)
+		distances = np.tril(distances)
+		distances[distances==0.]=None
+	
+	if coned:
+		title= "Wasserstein-KDE distance between coned graphs"
+	else: 
+		title= "Wasserstein-KDE distance between graphs"
+	
+	heat_map = sb.heatmap(distances,xticklabels=labels,yticklabels=labels)
+	plt.title(title)
+	plt.show()
+
+def graph_distance(files,dist_type,n_eigs = 180,dim_len_spec=1,count = False,coned = False):
+	eigss,graphs,cols=preprocessing(files, "2D", n_eigs, count, coned)
 
 	if dist_type=="sunbeam":
 		distance_sunbeam(graphs,cols,dim_len_spec,coned)
@@ -204,31 +310,17 @@ def graph_distance(files,dist_type,eig_format="2D",n_eigs = 180,dim_len_spec=1,c
 		complex_eigs,graphs,cols=preprocessing(files, "complex", n_eigs, count, coned)
 		distance_gromov(complex_eigs,cols,coned)
 
+	if dist_type=="wasserstein-grid":
+		wasserstein_kde_dist(eigss,cols,dist_type="grid",coned=coned)
+
+	if dist_type=="wasserstein-sample":
+		wasserstein_kde_dist(eigss,cols,dist_type="sample",coned=coned)
+
+	if dist_type=="spectral":
+		spectral_distance(eigs,cols,coned)
 
 
 
-
-
-##WASSERSTEIN DISTANCE
-#Converting to fft
-fft_data = [np.fft.fft(data[i]) for i in range(len(data))]
-distances = np.zeros([len(data),len(data)])
-for i in range(len(fft_data)):
-	for j in range(len(fft_data)):
-		distances[i,j]=ot.wasserstein_1d(abs(fft_data[i]),abs(fft_data[j]))
-
-distances +=1
-distances = np.tril(distances)
-distances -=1
-distances[distances==-1.]=None
-
-
-dics = {"blue":"young","red":"old"}
-labels = [dics[res] for res in sorted(cols)]
-
-heat_map = sb.heatmap(distances,xticklabels=labels,yticklabels=labels)
-plt.title("Wasserstein distance between fft data")
-plt.show()
 
 embedding=umap.UMAP(n_components=2,n_neighbors=25,spread=2,metric=dist_eigs,verbose=True)
 H = embedding.fit_transform(data,y=cols)
