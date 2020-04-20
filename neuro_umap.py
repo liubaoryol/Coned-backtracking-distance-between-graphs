@@ -134,6 +134,9 @@ def distance_sunbeam(graphs,cols,dim_len_spec=1,coned = False):
 	
 	distances = np.tril(distances)
 	distances[distances==0.]=None
+	for i in range(len(distances)):
+		if not distances[i,i] >=0.:
+			distances[i,i]=0.
 	
 	if coned:
 		title= "Sunbeam distance between coned graphs"
@@ -182,6 +185,9 @@ def distance_gromov(complex_eig_data,cols,coned=False):
 		
 	distances = np.tril(distances)
 	distances[distances==0.]=None
+	for i in range(len(distances)):
+		if not distances[i,i] >=0.:
+			distances[i,i]=0.
 		
 	if coned:
 		title= "Gromov-Wasserstein distances between coned graphs"
@@ -216,10 +222,15 @@ def spectral_distance(eigs,cols,coned = False):
 	distances = np.zeros([len(eigs),len(eigs)])
 	for i in range(len(eigs)):
 		for j in range(len(eigs)):
-			n=max(len(sortedeigs[i]),len(sortedeigs[j]))
+			n=min(len(sortedeigs[i]),len(sortedeigs[j]))
 			distances[i,j]=np.linalg.norm(sortedeigs[i][:n]-sortedeigs[j][:n])
 	distances = np.tril(distances)
 	distances[distances==0.]=None
+
+	for i in range(len(distances)):
+		if not distances[i,i] >=0.:
+			distances[i,i]=0.
+		
 	
 	if coned:
 		title= "Spectral distance between coned graphs"
@@ -237,7 +248,6 @@ def wasserstein_kde_dist(eigs,cols,dist_type="sample",coned=False):
 	dist_type=sample,grid
 	"""
 	eigs1,eigs2=[],[]
-	labels=[]
 	for i in range(len(graphs)):
 		if cols[i]=="blue":
 			eigs1.append(eigs[i])
@@ -282,19 +292,23 @@ def wasserstein_kde_dist(eigs,cols,dist_type="sample",coned=False):
 		distances = np.zeros([len(eigs_data),len(eigs_data)])
 		for i in range(len(eigs_data)):
 			for j in range(len(eigs_data)):
-				vector_i=[n1[l],n1[k],grid[i,l,k] for l in range(len(n1)) for k in range(len(n2))]
-				vector_j=[n1[l],n1[k],grid[j,l,k] for l in range(len(n1)) for k in range(len(n2))]
+				vector_i=[np.array([n1[l],n1[k],grid[i,l,k]]) for l in range(len(n1)) for k in range(len(n2))]
+				vector_j=[np.array([n1[l],n1[k],grid[j,l,k]]) for l in range(len(n1)) for k in range(len(n2))]
 				C = sp.spatial.distance.cdist(vector_i,vector_j)
 				C /= C.max()
+				print("length of vector i and vector j is "+str(len(vector_i))+str(len(vector_j))+" respectively")
 				distances[i,j]=ot.emd2(np.ones(len(n1)),np.ones(len(n2)),C)
 		distances = np.tril(distances)
 		distances[distances==0.]=None
-	
+
+	for i in range(len(distances)):
+		if not distances[i,i] >=0.:
+			distances[i,i]=0.
 	if coned:
 		title= "Wasserstein-KDE distance between coned graphs"
 	else: 
 		title= "Wasserstein-KDE distance between graphs"
-	
+
 	heat_map = sb.heatmap(distances,xticklabels=labels,yticklabels=labels)
 	plt.title(title)
 	plt.show()
@@ -304,7 +318,6 @@ def graph_distance(files,dist_type,n_eigs = 180,dim_len_spec=1,count = False,con
 
 	if dist_type=="sunbeam":
 		distance_sunbeam(graphs,cols,dim_len_spec,coned)
-
 
 	if dist_type=="gromov-wasserstein":
 		complex_eigs,graphs,cols=preprocessing(files, "complex", n_eigs, count, coned)
