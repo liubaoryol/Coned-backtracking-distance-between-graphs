@@ -1,7 +1,6 @@
 # Graph distance
 A python module to calculate distance between graphs. The code helps calculate distance between graphs using their topological properties. The following distances are supported:
 
-| **pydistance**              | **Description**            | 
 |:-------------------------:|:----------------------------------------------------------------------------------------:|
 | **spectral**              | **This is the original python sunbeam distance**                                         |
 | **relaxed_nbc**           | **Using nonbacktracking nonbacktracking eigenvalues**                                    | 
