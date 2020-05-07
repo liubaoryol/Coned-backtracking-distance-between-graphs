@@ -1,11 +1,12 @@
 # Graph distance
 A python module to calculate distance between graphs. The code helps calculate distance between graphs using their topological properties. The following distances are supported:
 
+|      Distance             |                      Description                                                         |
 |:-------------------------:|:----------------------------------------------------------------------------------------:|
-| **spectral**              | **This is the original python sunbeam distance**                                         |
-| **relaxed_nbc**           | **Using nonbacktracking nonbacktracking eigenvalues**                                    | 
-| **wasserstein_kde_dist**  | **Wasserstein distance between estimated distributions of nonbacktracking eigenvalues**  | 
-| **distance_gr_wass**      | **Gromov-Wasserstein distance between nonbacktracking eigenvalue vectors**               | 
+| spectral                  | This is the original python sunbeam distance                                         |
+| relaxed_nbc           | Using nonbacktracking nonbacktracking eigenvalues                                    | 
+| wasserstein_kde_dist  | Wasserstein distance between estimated distributions of nonbacktracking eigenvalues  | 
+| distance_gr_wass      | Gromov-Wasserstein distance between nonbacktracking eigenvalue vectors               | 
 
 
 
