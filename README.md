@@ -1,9 +1,9 @@
 # Graph distance
-A python module to calculate distance between graphs. The code helps calculate distance between graphs using their topological properties. The following distances are supported:
+Calculate distance between graphs. The following distances are supported:
 
 |      Distance             |                      Description                                                         |
 |:-------------------------:|:----------------------------------------------------------------------------------------:|
-| spectral                  | This is the original python sunbeam distance                                         |
+| spectral                  | This is the original python sunbeam distance                                        |
 | relaxed_nbc           | Using nonbacktracking nonbacktracking eigenvalues                                    | 
 | wasserstein_kde_dist  | Wasserstein distance between estimated distributions of nonbacktracking eigenvalues  | 
 | distance_gr_wass      | Gromov-Wasserstein distance between nonbacktracking eigenvalue vectors               | 
@@ -15,20 +15,15 @@ A python module to calculate distance between graphs. The code helps calculate d
 
 * __Run on your local machine__
    * Clone this repository on your local machine.
-   * Open a terminal with the path where you clone this repository.
-   * Create a virtual environment,(see this [link](https://gist.github.com/mevangelista-alvarado/8ee2fd663e7446e543fc04eacce0f303))
-   
-   * Install the requirements:
-      ```
-      (venv_name) C:Users/dekstop/graph_distance$ pip install
-      ```
-   * Instantiate the directory where your graph data is into the variable `files` (or any other preferred name)
-   * Run command `graph_distance(files,distance_type)`
+   * Open a terminal with the path where you cloned this repository.
+   * Import the neuro_umap.py
+   * First calculate the nonbacktracking eigenvalues of the graphs using `eigs=nbeigs_calculate(graphs,'2D')` function
+   * Select the distance you want to use and run. Example `distance_gr_wass(eigs),
 
 
 
 ## References
-Some of the functions in this module have been used to obtain the results in these articles:
+Motivated on the following articles:
 
  * Torres, L., Suárez-Serrato, P. & Eliassi-Rad, T.  <br/>
  [Non-backtracking Cycles: Length Spectrum
