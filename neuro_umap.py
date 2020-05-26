@@ -15,13 +15,14 @@ from mpl_toolkits.mplot3d import Axes3D
 
 #Define categories of graph data
 dir_oldyoung="edge_list_graphs" 
+dir_comacontrol="edge_list_graphs_coma"
 category1="Young"
 category2="Old"
-category3="WS"
-category4="ER"
+category3="Patient"
+category4="Control"
 
 #Color identifiers for each category
-colores={category1:'blue',category2:'red',category3:'green',category4:'yellow'}
+colores={category1:'blue',category2:'red',category3:'blue',category4:'red'}
 Kcolores=list(colores.keys())
 
 counter={category2:0,category1:0,category3:0,category4:0} 
@@ -35,21 +36,27 @@ dic[category4]=3
 
 
 
-
 files = os.listdir(dir_oldyoung)
+files = os.listdir(dir_comacontrol)
 
-#Creating graph instances and calculating non backtracking eigenvalues
+#Creating graph instances of files and calculating non backtracking eigenvalues
 def preprocessing(files,eig_format,n_eigs = "max",count = False,coned = False):
 	"""
+	INPUT:
 	eig_format: complex,1D,2D
 	n_eigs: maximum number of eigenvalues to calculate. Default is maximum possible
-	count: boolean to count distribution of data
+	count: boolean to count number of instances per category
+	OUTPUT:
+	eigss: nonbacktracking eigenvalues
+	graphs: networkx instances
+	cols: color labels representing the categories
+	counter: number of categories. Only if count=True
 	"""
 	eigss=[]
 	cols = []
 	graphs=[]
 	for f in files[:]:
-		G = nx.read_edgelist(os.path.join(dir_oldyoung,f))
+		G = nx.read_edgelist(os.path.join(dir_comacontrol,f))
 		if coned:
 			G.add_node("cone")
 			node_list=nodes_of_degree1(G)
@@ -57,17 +64,18 @@ def preprocessing(files,eig_format,n_eigs = "max",count = False,coned = False):
 				G.add_edge(*(each,"cone"))
 		graphs.append(G)
 		#calculate maximum possible number of eigenvalues
-		if n_eigs="max":
-			core=shave(G)
+		if n_eigs=="max":
+			core=sunbeam.shave(G)
 			n_eigs=len(core.node)*2-2
 
 		eigs = sunbeam.nbeigs(G, n_eigs,fmt=eig_format)
 		eigss.append(eigs)
-		cols.append(colores[Kcolores[w]])
-
 		#Counting number of observations per class
 		w=[(key in f) for key in Kcolores].index(True)
 		counter[Kcolores[w]]+=1 
+		cols.append(colores[Kcolores[w]])
+
+		
 
 	if count: 
 		return eigss,graphs, cols, counter
@@ -100,11 +108,17 @@ def nodes_of_degree1(G):
 
 
 #Plot heat map of euclidean distance between truncated eigenvalue vectors
-def relaxed_nbc(graphs,cols,dim_len_spec=1,coned = False):
+def relaxed_nbc(graphs,cols,dim_len_spec=5,coned = False,classes=["patient","control"]):
 	"""
+	DESCRIPTION: Calculates the distance between the RELAXED length spectrum of each graph
+	
+	INPUT:
+	
 	dist_type: euclidean
 	graphs1 <----young
 	graphs2 <---- old
+	
+	OUTPUT: heatmap of distances
 	"""
 	graphs1,graphs2=[],[]
 	#Sorting graphs for visualization purposes
@@ -116,7 +130,7 @@ def relaxed_nbc(graphs,cols,dim_len_spec=1,coned = False):
 		
 	
 	sortedgraphs=graphs1 + graphs2
-	sortedlabels = ["young" for j in range(len(graphs1))]+["old" for j in range(len(graphs2))]
+	sortedlabels = [classes[0] for j in range(len(graphs1))]+[classes[1] for j in range(len(graphs2))]
 
 	print("Calculating distance matrix...")
 	distances = np.zeros([len(graphs),len(graphs)])
@@ -136,23 +150,27 @@ def relaxed_nbc(graphs,cols,dim_len_spec=1,coned = False):
 			distances[i,i]=0.
 	
 	if coned:
-		title= "Sunbeam distance between coned graphs"
+		title= "Relaxed nonbacktracking spectrum distance between coned graphs"
 	else: 
-		title= "Sunbeam distance between graphs"
+		title= "Relaxed nonbacktracking spectrum distance between graphs"
 	
 	heat_map = sb.heatmap(distances,xticklabels=sortedlabels,yticklabels=sortedlabels)
 	plt.title(title)
 	plt.show()
 
 
-#Plot heat map of gromov wasserstein distance between truncated eigenvalue vectors
 
 
-def distance_gr_wass(complex_eig_data,cols,coned=False):
+
+def distance_gr_wass(complex_eig_data,cols,coned=False,classes=["patient","control"]):
 	"""
+	DESCRIPTION: calculates gromov wasserstein distance between the feature vectors of each graph. 
+	The feature vector consists of eigenvalues of nonbacktracking matrix
+	
 	dist_type: gromov-wasserstein
 	eigs1 <----young
 	eigs2 <---- old
+	OUTPUT: heatmap of distances
 	"""
 	#Sorting graphs for visualization purposes
 	complex_eigs1,complex_eigs2=[],[]
@@ -167,7 +185,7 @@ def distance_gr_wass(complex_eig_data,cols,coned=False):
 
 	sortedeigs=eigs1 + eigs2
 	sortedeigs_complex = np.array(complex_eigs1+complex_eigs2)
-	sortedlabels = ["young" for j in range(len(complex_eigs1))]+["old" for j in range(len(complex_eigs2))]
+	sortedlabels = [classes[0] for j in range(len(complex_eigs1))]+[classes[1] for j in range(len(complex_eigs2))]
 	print("Calculating distance matrix...")
 	distances = np.zeros([len(complex_eig_data),len(complex_eig_data)])
 	for i in range(len(complex_eig_data)):
@@ -177,8 +195,12 @@ def distance_gr_wass(complex_eig_data,cols,coned=False):
 			C2 = sp.spatial.distance.cdist(sortedeigs[j],sortedeigs[j])
 			C1 /= C1.max()
 			C2 /= C2.max()
+			n_samples=len(sortedeigs[i])
+			p=ot.unif(n_samples)
+			n_samples=len(sortedeigs[j])
+			q=ot.unif(n_samples)
 			gw0, log0 = ot.gromov.gromov_wasserstein2(
-			    C1, C2, sortedeigs_complex[i], sortedeigs_complex[j], 'square_loss', verbose=True, log=True)
+			    C1, C2, p,q, 'square_loss', verbose=True, log=True)
 			distances[i,j]=abs(gw0)
 		
 	distances = np.tril(distances)
@@ -197,9 +219,10 @@ def distance_gr_wass(complex_eig_data,cols,coned=False):
 	plt.show()
 
 
-#Sunbeam original distance
-def spectral_distance(eigs,cols,coned = False):
+
+def spectral_distance(eigs,cols,coned = False,classes=["patient","control"]):
 	"""
+	DESCRIPTION: Calculates the distances between truncated feature vectors of nonbacktracking eigenvalues
 	dist_type: euclidean
 	graphs1 <----young
 	graphs2 <---- old
@@ -214,7 +237,7 @@ def spectral_distance(eigs,cols,coned = False):
 		
 	
 	sortedeigs=eigs1 + eigs2
-	sortedlabels = ["young" for j in range(len(eigs1))]+["old" for j in range(len(eigs2))]
+	sortedlabels = [classes[0] for j in range(len(eigs1))]+[classes[1] for j in range(len(eigs2))]
 
 	print("Calculating distance matrix...")
 	distances = np.zeros([len(eigs),len(eigs)])
@@ -241,9 +264,11 @@ def spectral_distance(eigs,cols,coned = False):
 
 
 #Wasserstein distance between estimated density distributions of eigenvalues.
-def wasserstein_kde_dist(eigs,cols,dist_type="sample",sample_size=60,coned=False):
+def wasserstein_kde_dist(eigs,cols,dist_type="sample",bw = 2, ker = 'gaussian',sample_size=60,coned=False,classes=["patient","control"]):
 	"""
-	dist_type=sample,grid
+	dist_type---sample,grid
+	bw --- bandwidth of KDE
+	ker--- kernel of KDE
 	"""
 	#Sorting eigs for visualization purposes
 	eigs1,eigs2=[],[]
@@ -253,10 +278,10 @@ def wasserstein_kde_dist(eigs,cols,dist_type="sample",sample_size=60,coned=False
 		else:
 			eigs2.append(eigs[i])
 	eigs_data=eigs1 + eigs2 
-	sortedlabels = ["young" for j in range(len(eigs1))]+["old" for j in range(len(eigs2))]
+	sortedlabels = [classes[0] for j in range(len(eigs1))]+[classes[1] for j in range(len(eigs2))]
 	
 	#Create a list of Kernel density objects associated to each connectome observation
-	model = [KernelDensity(bandwidth=2, kernel='gaussian') for eigs in eigs_data]
+	model = [KernelDensity(bandwidth=bw, kernel=ker) for eigs in eigs_data]
 	#Setting limits for the Wasserstein grid evaluation, for each connectome. Limits are determined by maximum and minimum real & imaginary part of observed eigenvalue
 	limits_x=[]
 	limits_y=[]
@@ -323,7 +348,7 @@ def wasserstein_kde_dist(eigs,cols,dist_type="sample",sample_size=60,coned=False
 def graph_distance(files,dist_type,n_eigs = 180,dim_len_spec=1,count = False,sample_size=60,coned = False):
 	eigss,graphs,cols=preprocessing(files, "2D", n_eigs, count, coned)
 
-	if dist_type=="sunbeam":
+	if dist_type=="relaxed_nbc":
 		relaxed_nbc(graphs,cols,dim_len_spec,coned)
 
 	if dist_type=="gromov-wasserstein":
@@ -337,7 +362,7 @@ def graph_distance(files,dist_type,n_eigs = 180,dim_len_spec=1,count = False,sam
 		wasserstein_kde_dist(eigss,cols,dist_type="sample",sample_size=sample_size,coned=coned)
 
 	if dist_type=="spectral":
-		spectral_distance(eigs,cols,coned)
+		spectral_distance(eigss,cols,coned)
 
 
 
