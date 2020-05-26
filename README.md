@@ -18,7 +18,7 @@ Calculate distance between graphs. The following distances are supported:
    * Open a terminal with the path where you cloned this repository.
    * Import the neuro_umap.py
    * First calculate the nonbacktracking eigenvalues of the graphs using `eigs=nbeigs_calculate(graphs,'2D')` function
-   * Select the distance you want to use and run. Example `distance_gr_wass(eigs),
+   * Select the distance you want to use and run. Example `distance_gr_wass(eigs)`
 
 
 
