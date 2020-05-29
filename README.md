@@ -14,7 +14,7 @@ Calculate distance between graphs. The following distances are supported:
 
 ## 🚀 Running code
 
-Python version>=3.5
+Python version >= 3.5
 
 * __Run on your local machine__
    * Clone this repository on your local machine. `git clone https://github.com/liubaoryol/graph_distance.git`
