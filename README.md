@@ -9,10 +9,12 @@ Calculate distance between graphs. The following distances are supported:
 | distance_gr_wass      | Gromov-Wasserstein distance between nonbacktracking eigenvalue vectors               | 
 
 
-Python >=3.5
+
 
 
 ## 🚀 Running code
+
+Python version>=3.5
 
 * __Run on your local machine__
    * Clone this repository on your local machine. `git clone https://github.com/liubaoryol/graph_distance.git`
