@@ -4,9 +4,9 @@ Calculate distance between graphs. The following distances are supported:
 |      Distance             |                      Description                                                         |
 |:-------------------------:|:----------------------------------------------------------------------------------------:|
 | spectral                  | This is the original python sunbeam distance                                        |
-| relaxed_nbc           | Using nonbacktracking nonbacktracking eigenvalues                                    | 
 | wasserstein_kde_dist  | Wasserstein distance between estimated distributions of nonbacktracking eigenvalues  | 
 | distance_gr_wass      | Gromov-Wasserstein distance between nonbacktracking eigenvalue vectors               | 
+<!---| relaxed_nbc           | Using nonbacktracking nonbacktracking eigenvalues                                    | -->
 
 
 
