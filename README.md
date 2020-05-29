@@ -9,19 +9,24 @@ Calculate distance between graphs. The following distances are supported:
 | distance_gr_wass      | Gromov-Wasserstein distance between nonbacktracking eigenvalue vectors               | 
 
 
+Python >=3.5
+
 
 ## 🚀 Running code
-
 
 * __Run on your local machine__
    * Clone this repository on your local machine. `git clone https://github.com/liubaoryol/graph_distance.git`
    * Install requirements: `pip install -r requirements.txt`
    * Open a terminal with the path where you cloned this repository `C:Users/desktop/graph_distance$ python`
-   * Import `neuro_umap` library as follows 
-   `>>> from neuro_umap import nbeigs_calculate, distance_gr_wass`
+   * Import `neuro_umap` functions as follows 
+   ```bash
+   >>> from neuro_umap import nbeigs_calculate, distance_gr_wass
+   ```
    * Example:
-   `>>> eigs=nbeigs_calculate(graphs,'2D')`
-   `>>> distance_gr_wass(eigs)`
+   ```bash
+   >>> eigs=nbeigs_calculate(graphs,'2D')
+   >>> distance_gr_wass(eigs)
+   ```
        
 
 ## References
