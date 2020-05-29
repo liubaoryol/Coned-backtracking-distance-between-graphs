@@ -16,12 +16,13 @@ Calculate distance between graphs. The following distances are supported:
 * __Run on your local machine__
    * Clone this repository on your local machine. `git clone https://github.com/liubaoryol/graph_distance.git`
    * Install requirements: `pip install -r requirements.txt`
-   * Open a terminal with the path where you cloned this repository `C:Users/desktop/graph_distance$python`
+   * Open a terminal with the path where you cloned this repository `C:Users/desktop/graph_distance$ python`
    * Import `neuro_umap` library as follows 
-   * First calculate the nonbacktracking eigenvalues of the graphs using `eigs=nbeigs_calculate(graphs,'2D')` function
-   * Select the distance you want to use and run. Example `distance_gr_wass(eigs)`
-
-
+   `>>> from neuro_umap import nbeigs_calculate, distance_gr_wass`
+   * Example:
+   `>>> eigs=nbeigs_calculate(graphs,'2D')`
+   `>>> distance_gr_wass(eigs)`
+       
 
 ## References
 Motivated on the following articles:
