@@ -41,7 +41,7 @@ Theory and Graph Mining Applications](https://link.springer.com/article/10.1007/
    
  * Achard, S., Delon-Martin, C., et al., <br/>
  [Hubs of brain functional networks are radically
-reorganized in comatose patients](https://www.researchgate.net/publication/233775192_Hubs_of_brain_functional_networks_are_radically_reorganized_in_comatose_patients),  <br/>
+reorganized in comatose patients](https://www.pnas.org/content/109/50/20608),  <br/>
    PNAS 109, 50  (2012)
    
 
